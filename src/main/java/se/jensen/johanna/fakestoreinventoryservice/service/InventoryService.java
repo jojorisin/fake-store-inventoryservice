@@ -1,0 +1,10 @@
+package se.jensen.johanna.fakestoreinventoryservice.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class InventoryService {
+
+}
