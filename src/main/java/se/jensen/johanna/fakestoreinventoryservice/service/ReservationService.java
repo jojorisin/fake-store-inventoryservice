@@ -83,8 +83,8 @@ public class ReservationService {
 
 
   /**
-   * Commits a reservation. ATM using expiredAt so the reservation won't hold double stock. I see
-   * advantages with using exernal stockservice so might implement that
+   * Commits a reservation for paid order. Reduces stock and updates reserved amount. Reservation is
+   * deleted so it's not caught by scheduler.
    */
   @Transactional
   public void reduceStock(UUID reservationId) {
@@ -96,14 +96,11 @@ public class ReservationService {
         });
 
     List<ReservationItem> items = reservation.getReservedItems();
-
     List<Inventory> inventory = fetchInventory(items);
-
     Map<UUID, Integer> toUpdate = buildQuantityMap(items);
 
-    inventory.forEach(i -> i.reduceStock(toUpdate.get(i.getProductId())));
-    reservation.expire();
-    reservationRepository.save(reservation);
+    inventory.forEach(i -> i.commitReservation(toUpdate.get(i.getProductId())));
+    reservationRepository.delete(reservation);
     inventoryRepository.saveAll(inventory);
     log.info("Reservation {} committed", reservationId);
 
@@ -126,6 +123,9 @@ public class ReservationService {
         ));
   }
 
+  /**
+   * Updates and deletes reservations that have been left unresolved
+   */
   @Scheduled(fixedRate = 900000)
   @Transactional
   public void expireReservations() {
@@ -143,7 +143,7 @@ public class ReservationService {
             Integer::sum
         ));
 
-    inventory.forEach(i -> i.releaseStock(toRelease.get(i.getProductId())));
+    inventory.forEach(i -> i.releaseReservedStock(toRelease.get(i.getProductId())));
     reservationRepository.deleteAll(expired);
     inventoryRepository.saveAll(inventory);
 
