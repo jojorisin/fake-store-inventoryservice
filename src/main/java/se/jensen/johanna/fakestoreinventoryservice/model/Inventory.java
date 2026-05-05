@@ -55,12 +55,13 @@ public class Inventory {
     this.reserved += quantity;
   }
 
-  public void releaseStock(Integer quantity) {
+  public void releaseReservedStock(Integer quantity) {
     this.reserved -= quantity;
   }
 
-  public void reduceStock(Integer quantity) {
-    this.inStock += quantity;
+  public void commitReservation(Integer quantity) {
+    this.inStock -= quantity;
+    this.reserved -= quantity;
   }
 
   public Boolean isAvailable(Integer requestedQuantity) {

@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -40,6 +41,9 @@ public class Reservation {
   @NotNull
   private Instant expiresAt;
 
+  @Version
+  private Long version;
+
   @PrePersist
   protected void onCreate() {
     this.reservedAt = Instant.now();
@@ -52,10 +56,6 @@ public class Reservation {
         .expiresAt(Instant.now().plus(15, ChronoUnit.MINUTES))
         .build();
 
-  }
-
-  public void expire() {
-    this.expiresAt = Instant.now();
   }
 
 
