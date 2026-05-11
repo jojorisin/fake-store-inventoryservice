@@ -17,6 +17,7 @@ import se.jensen.johanna.fakestoreinventoryservice.dto.AvailabilityResponse;
 import se.jensen.johanna.fakestoreinventoryservice.dto.CartItemRequest;
 import se.jensen.johanna.fakestoreinventoryservice.dto.ReservationRequest;
 import se.jensen.johanna.fakestoreinventoryservice.dto.ReservationResponse;
+import se.jensen.johanna.fakestoreinventoryservice.exception.LimitedStockException;
 import se.jensen.johanna.fakestoreinventoryservice.model.Inventory;
 import se.jensen.johanna.fakestoreinventoryservice.model.Reservation;
 import se.jensen.johanna.fakestoreinventoryservice.model.ReservationItem;
@@ -33,9 +34,12 @@ public class ReservationService {
 
   @Transactional
   public ReservationResponse reserveCart(Jwt jwt, ReservationRequest request) {
+    log.info("Reserving cart {} for user: {}", request, jwt.getSubject());
     AvailabilityResponse response = getCartAvailability(request.cartItemRequests());
     if (!response.allAvailable()) {
-      throw new IllegalArgumentException("Stock is not available.");
+      log.warn("Unable to reserve cart for user: {}. Not all items are available. Updated cart: {}",
+          jwt.getSubject(), response.updatedCart());
+      throw new LimitedStockException("All items are not available.");
     }
 
     List<ReservationItem> reservationItems = request.cartItemRequests().stream()
@@ -54,6 +58,8 @@ public class ReservationService {
     // cascade all children
     reservationRepository.save(reservation);
     inventoryRepository.saveAll(inventory);
+    log.info("Successfully reserved cart for  user {}. reservation id: {}", jwt.getSubject(),
+        reservation.getReservationId());
     return new ReservationResponse(reservation.getReservationId());
   }
 
@@ -91,7 +97,7 @@ public class ReservationService {
     log.info("Committing reservation {}", reservationId);
     Reservation reservation = reservationRepository.findByReservationId(reservationId)
         .orElseThrow(() -> {
-          log.error("ReservationId {} not found when trying to commit reservation", reservationId);
+          log.error("Reservation Id {} not found when trying to commit reservation", reservationId);
           return new IllegalStateException("Reservation not found");
         });
 
@@ -102,8 +108,7 @@ public class ReservationService {
     inventory.forEach(i -> i.commitReservation(toUpdate.get(i.getProductId())));
     reservationRepository.delete(reservation);
     inventoryRepository.saveAll(inventory);
-    log.info("Reservation {} committed", reservationId);
-
+    log.info("Reservation {} committed.", reservationId);
 
   }
 
@@ -129,7 +134,14 @@ public class ReservationService {
   @Scheduled(fixedRate = 900000)
   @Transactional
   public void expireReservations() {
+    log.info("Checking for expired reservations...");
     List<Reservation> expired = reservationRepository.findByExpiresAtBefore(Instant.now());
+    if (expired.isEmpty()) {
+      log.info("No expired reservations found at {}.", Instant.now());
+      return;
+    }
+    log.info("Found {} expired reservations.", expired.size());
+
     Set<UUID> productIds = expired.stream()
         .flatMap(r -> r.getReservedItems().stream())
         .map(ReservationItem::getProductId)
@@ -146,6 +158,7 @@ public class ReservationService {
     inventory.forEach(i -> i.releaseReservedStock(toRelease.get(i.getProductId())));
     reservationRepository.deleteAll(expired);
     inventoryRepository.saveAll(inventory);
+    log.info("Expired reservations deleted. Updated: {}", toRelease);
 
   }
 

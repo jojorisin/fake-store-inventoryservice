@@ -41,7 +41,7 @@ public class ReservationController {
 
   @PostMapping("/check-stock")
   public ResponseEntity<AvailabilityResponse> checkAvailability(
-      @RequestBody AvailabilityRequest request) {
+      @RequestBody @Valid AvailabilityRequest request) {
     return ResponseEntity.ok()
         .body(reservationService.getCartAvailability(request.cartItemRequests()));
   }
