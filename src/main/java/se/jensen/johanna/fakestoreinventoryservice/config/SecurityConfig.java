@@ -25,7 +25,7 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health").permitAll()
-            .requestMatchers("/api/reservations/check-stock").permitAll()
+            .requestMatchers("/api/reservations/**").permitAll()
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth -> oauth
             .jwt(Customizer.withDefaults()));
