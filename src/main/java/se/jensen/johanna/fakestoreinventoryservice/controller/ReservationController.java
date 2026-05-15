@@ -35,7 +35,7 @@ public class ReservationController {
 
   @PostMapping("/{reservationId}/reduce-stock")
   public ResponseEntity<Void> commitReservation(@PathVariable UUID reservationId) {
-    reservationService.reduceStock(reservationId);
+    reservationService.confirmReservation(reservationId);
     return ResponseEntity.ok().build();
   }
 
