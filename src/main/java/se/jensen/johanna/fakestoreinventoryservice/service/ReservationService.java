@@ -89,11 +89,11 @@ public class ReservationService {
 
 
   /**
-   * Commits a reservation for paid order. Reduces stock and updates reserved amount. Reservation is
-   * deleted so it's not caught by scheduler.
+   * Confirms a reservation for paid order. Reduces stock and updates reserved amount. Reservation
+   * is deleted so it's not caught by scheduler.
    */
   @Transactional
-  public void reduceStock(UUID reservationId) {
+  public void confirmReservation(UUID reservationId) {
     log.info("Committing reservation {}", reservationId);
     Reservation reservation = reservationRepository.findByReservationId(reservationId)
         .orElseThrow(() -> {
@@ -104,6 +104,8 @@ public class ReservationService {
     List<ReservationItem> items = reservation.getReservedItems();
     List<Inventory> inventory = fetchInventory(items);
     Map<UUID, Integer> toUpdate = buildQuantityMap(items);
+
+    log.info("Updating inventory for: {}", toUpdate);
 
     inventory.forEach(i -> i.commitReservation(toUpdate.get(i.getProductId())));
     reservationRepository.delete(reservation);

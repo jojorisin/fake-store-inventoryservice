@@ -33,6 +33,8 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID> 
     Integer getCount();
   }
 
+  Boolean existsByReservationId(UUID reservationId);
+
   @EntityGraph(attributePaths = "reservedItems")
   List<Reservation> findByExpiresAtBefore(Instant expiresAt);
 
